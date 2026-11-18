@@ -1,44 +1,51 @@
-import joblib
-import pandas as pd
 from fastapi import FastAPI, HTTPException
-from api_service.schemas import TransactionInput, PredictionOutput
+import joblib
+import numpy as np
+import pandas as pd
+from schemas import TransactionInput
 
 app = FastAPI(
-    title="API de Detección de Fraude",
-    description="Servicio de inferencia para transacciones financieras",
+    title="API de Detección de Fraude Financiero",
+    description="Servicio REST para inferencia de fraude sobre transacciones PaySim.",
     version="1.0.0"
 )
 
-# Cargar el pipeline completo (ColumnTransformer + Clasificador) al iniciar
-try:
-    model = joblib.load("models/fraud_pipeline.joblib")
-except Exception as e:
-    model = None
-    print(f"Error cargando el modelo: {e}")
+model = joblib.load("fraud_model.pkl")
+P99_CAP = 1623278.90  # Tope de Winsorización aplicado en Silver
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "model_loaded": True}
 
-@app.post("/predict", response_model=PredictionOutput)
-def predict_fraud(transaction: TransactionInput):
-    if model is None:
-        raise HTTPException(status_code=500, detail="El modelo no está disponible.")
+@app.post("/predict")
+def predict_fraud(tx: TransactionInput):
+    try:
+        hour_of_day = tx.step % 24
+        amount_capped = min(tx.amount, P99_CAP)
+        log_amount = float(np.log1p(amount_capped))
+        error_orig = tx.oldbalanceOrg - tx.amount - tx.newbalanceOrig
+        error_dest = tx.oldbalanceDest + tx.amount - tx.newbalanceDest
 
-    # 1. Convertir el objeto Pydantic a un DataFrame de 1 fila con los nombres exactos de columna
-    input_data = pd.DataFrame([transaction.model_dump()])
+        features_df = pd.DataFrame([{
+            "type": tx.type,
+            "hour_of_day": hour_of_day,
+            "log_amount": log_amount,
+            "oldbalanceOrg": tx.oldbalanceOrg,
+            "newbalanceOrig": tx.newbalanceOrig,
+            "oldbalanceDest": tx.oldbalanceDest,
+            "newbalanceDest": tx.newbalanceDest,
+            "is_merchant_dest": tx.is_merchant_dest,
+            "errorBalanceOrig": error_orig,
+            "errorBalanceDest": error_dest
+        }])
 
-    # 2. Obtener probabilidad de fraude (clase 1) y predicción binaria
-    fraud_prob = float(model.predict_proba(input_data)[0][1])
-    is_fraud = int(fraud_prob >= 0.5)
+        prob = float(model.predict_proba(features_df)[0][1])
+        pred = int(prob >= 0.5)
 
-    # 3. Clasificar el nivel de riesgo
-    if fraud_prob >= 0.75:
-        risk_level = "HIGH"
-    elif fraud_prob >= 0.35:
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "LOW"
-
-    return PredictionOutput(
-        is_fraud=is_fraud,
-        fraud_probability=round(fraud_prob, 4),
-        risk_level=risk_level
-    )
+        return {
+            "is_fraud": pred,
+            "fraud_probability": round(prob, 4),
+            "decision": "BLOQUEAR" if pred == 1 else "APROBAR"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno de inferencia: {str(e)}")
