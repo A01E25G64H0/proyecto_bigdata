@@ -6,7 +6,7 @@ import plotly.express as px
 st.set_page_config(page_title="Detección de Fraude PaySim", layout="wide")
 
 # Reemplaza por la URL pública de tu API en Render o Hugging Face
-DEFAULT_API_URL = "https://tu-servicio-fraude.onrender.com/predict"
+DEFAULT_API_URL = "https://api-fraude-paysim.onrender.com/predict"
 
 st.title("Sistema de Detección de Fraude Financiero en Tiempo Real")
 api_url = st.sidebar.text_input("Endpoint de la API REST:", value=DEFAULT_API_URL)
