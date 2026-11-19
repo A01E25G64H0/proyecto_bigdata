@@ -1,3 +1,4 @@
+from pathlib import Path
 import streamlit as st
 import requests
 import pandas as pd
@@ -5,11 +6,11 @@ import plotly.express as px
 
 st.set_page_config(page_title="Detección de Fraude PaySim", layout="wide")
 
-# Reemplaza por la URL pública de tu API en Render o Hugging Face
+# URL pública de la API desplegada en Render
 DEFAULT_API_URL = "https://api-fraude-paysim.onrender.com/predict"
 
 st.title("Sistema de Detección de Fraude Financiero en Tiempo Real")
-api_url = st.sidebar.text_input("Endpoint de la API REST:", value=DEFAULT_API_URL)
+api_url = st.sidebar.text_input("Endpoint de la API REST:", value=DEFAULT_API_URL).strip()
 
 tab1, tab2 = st.tabs(["Evaluador de Riesgo en Vivo", "Tablero de Monitoreo (Capa Gold)"])
 
@@ -41,31 +42,33 @@ with tab1:
             "newbalanceDest": float(new_dest),
             "is_merchant_dest": int(is_merchant)
         }
-        try:
-            response = requests.post(api_url, json=payload, timeout=90)
-            response.raise_for_status()
-            data = response.json()
+        with st.spinner("Consultando API en Render (el primer envío puede tardar hasta 1 minuto mientras despierta el servidor)..."):
+            try:
+                response = requests.post(api_url, json=payload, timeout=90)
+                response.raise_for_status()
+                data = response.json()
 
-            if "is_fraud" not in data or "fraud_probability" not in data:
-                st.error("Respuesta inválida del servidor: faltan campos obligatorios.")
-            elif data["is_fraud"] == 1:
-                st.error(f"ALERTA DE FRAUDE ({data['decision']}) — Probabilidad: {data['fraud_probability']*100:.2f}%")
-            else:
-                st.success(f"TRANSACCIÓN SEGURA ({data['decision']}) — Probabilidad de fraude: {data['fraud_probability']*100:.2f}%")
+                if "is_fraud" not in data or "fraud_probability" not in data:
+                    st.error("Respuesta inválida del servidor: faltan campos obligatorios.")
+                elif data["is_fraud"] == 1:
+                    st.error(f"ALERTA DE FRAUDE ({data.get('decision', 'FRAUDE')}) — Probabilidad: {data['fraud_probability']*100:.2f}%")
+                else:
+                    st.success(f"TRANSACCIÓN SEGURA ({data.get('decision', 'LEGÍTIMA')}) — Probabilidad de fraude: {data['fraud_probability']*100:.2f}%")
 
-        except requests.exceptions.Timeout:
-            st.warning("Tiempo de espera agotado (Timeout): la API tardó demasiado en responder.")
-        except requests.exceptions.ConnectionError:
-            st.error("Error de conexión: no se pudo contactar al servicio del modelo publicado.")
-        except requests.exceptions.HTTPError:
-            st.error(f"Error HTTP {response.status_code}: datos rechazados por validación ({response.text}).")
-        except ValueError:
-            st.error("Respuesta inválida: el servidor no devolvió un JSON válido.")
+            except requests.exceptions.Timeout:
+                st.warning("Tiempo de espera agotado (Timeout): la API tardó demasiado en responder.")
+            except requests.exceptions.ConnectionError:
+                st.error("Error de conexión: no se pudo contactar al servicio del modelo publicado.")
+            except requests.exceptions.HTTPError as e:
+                st.error(f"Error HTTP {e.response.status_code}: datos rechazados por validación ({e.response.text}).")
+            except ValueError:
+                st.error("Respuesta inválida: el servidor no devolvió un JSON válido.")
 
 with tab2:
     st.subheader("Indicadores Agregados sobre >4M de Transacciones (Capa Gold)")
+    csv_path = Path(__file__).parent / "gold_kpis.csv"
     try:
-        kpis = pd.read_csv("frontend_app/gold_kpis.csv") if False else pd.read_csv("gold_kpis.csv")
+        kpis = pd.read_csv(csv_path)
         c1, c2, c3 = st.columns(3)
         c1.metric("Transacciones Analizadas", f"{int(kpis['total_transacciones'].sum()):,}")
         c2.metric("Fraudes Detectados", f"{int(kpis['total_fraudes'].sum()):,}")
