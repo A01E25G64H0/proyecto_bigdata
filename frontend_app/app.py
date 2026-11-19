@@ -42,7 +42,7 @@ with tab1:
             "is_merchant_dest": int(is_merchant)
         }
         try:
-            response = requests.post(api_url, json=payload, timeout=8)
+            response = requests.post(api_url, json=payload, timeout=90)
             response.raise_for_status()
             data = response.json()
 
