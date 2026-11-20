@@ -1,4 +1,4 @@
-# Sistema de Detección de Fraude Financiero en Tiempo Real (PaySim)
+# Sistema de Detección de Fraude Financiero
 
 Plataforma analítica y predictiva *end-to-end* diseñada para procesar más de **6.36 millones de transacciones financieras**, entrenar modelos de aprendizaje automático sobre clases desbalanceadas y exponer un servicio de inferencia en tiempo real consumido por una aplicación web interactiva.
 
