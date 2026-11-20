@@ -2,7 +2,7 @@
 
 Plataforma analítica y predictiva *end-to-end* diseñada para procesar más de **6.36 millones de transacciones financieras**, entrenar modelos de aprendizaje automático sobre clases desbalanceadas y exponer un servicio de inferencia en tiempo real consumido por una aplicación web interactiva.
 
-**Autor(es):** [Escribe aquí tu nombre completo / matrícula]
+**Autor: A.Enrique Guzmán Hernández
 
 ---
 
