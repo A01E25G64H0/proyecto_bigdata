@@ -11,8 +11,6 @@ Plataforma analítica y predictiva *end-to-end* diseñada para procesar más de 
 | Componente | Tecnología | URL |
 | :--- | :--- | :--- |
 | **Aplicación Web (Frontend)** | Streamlit Cloud | https://proyectobigdata-hxn4gmezjkkxy5uwm8nlyo.streamlit.app |
-| **API REST de Inferencia (Backend)** | FastAPI en Render | https://api-fraude-paysim.onrender.com |
-| **Endpoint de Predicción (`POST`)** | FastAPI + Scikit-Learn | https://api-fraude-paysim.onrender.com/predict |
 | **Documentación Interactiva** | Swagger UI / OpenAPI | https://api-fraude-paysim.onrender.com/docs |
 
 > **Nota sobre tiempos de respuesta:** El backend se encuentra desplegado en una instancia gratuita de Render que entra en suspensión tras 15 minutos de inactividad. La primera petición puede demorar entre **45 y 60 segundos** mientras inicializa el contenedor y carga el modelo en memoria; las consultas subsecuentes responden en milisegundos.
